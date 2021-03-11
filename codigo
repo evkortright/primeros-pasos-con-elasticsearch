@@ -1,0 +1,182 @@
+PUT productos/_doc/2
+{
+  "sku": 102,
+  "nombre": "armario",
+  "descripción": "Un armario útil para todo lo que quiera guardar por eternidad. Guarde una raqueta o un traje, sus tenis de uso diario, guarde otra raqueta, no hay límite a los usos de este armario.",
+  "precio": 800.95
+}
+
+PUT productos/_doc/3
+{
+  "sku": 403,
+  "nombre": "raqueta de tenis",
+  "descripción": "Raqueta de tenis aprobada por los mejores torneos. Fácil de guardar en cualquier armario. El gran tenista Raúl Ramírez en una ocasión usó una de estas raquetas de tenis (o una muy parecida) cuando jugó con uno de sus sobrinos.",
+  "precio": 450.95
+}
+
+PUT productos/_doc/4
+{
+  "sku": 111,
+  "nombre": "tenis de uso diario",
+  "descripción": "Camine con confianza en pavimento, lodo, alfombras, madera, y mas con estos tenis de alta tecnología y de alta calidad."
+}
+
+PUT productos/_doc/5
+{
+  "sku": 334,
+  "nombre": "pintura de color de rosa",
+  "descripción": "A diario es posible el uso de esta pintura. Su uso es muy conveniente aun cuando su uso sea diario."
+}
+
+ET productos/_search
+{
+  "query": {
+    "match": {
+      "descripción": {
+        "query": "tenis de uso diario",
+        "operator": "or"
+      }
+    }
+  }
+}
+
+GET productos/_search
+{
+  "query": {
+    "match": {
+      "descripción": {
+        "query": "tenis de uso diario",
+        "operator": "and"
+      }
+    }
+  }
+}
+
+GET productos/_search
+{
+  "query": {
+    "match": {
+      "descripción": {
+        "query": "tenis de uso diario",
+        "operator": "or",
+        "minimum_should_match": 2
+      }
+    }
+  }
+}
+
+GET productos/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "descripción": "tenis de uso diario"
+          }
+        }
+      ],
+      "should": [
+        {
+          "match": {
+            "nombre": "tenis de uso diario"
+          }
+        }
+      ]
+    }
+  }
+}
+
+
+PUT _scripts/busqueda_blogs
+{
+  "script": {
+    "lang": "mustache",
+    "source": {
+      "query": {
+        "match": {
+          "content": "{{terminos}}"
+        }
+      }
+    }
+  }
+}
+
+
+GET blogs/_search/template
+{
+  "id": "busqueda_blogs",
+  "params": {
+    "terminos": "Logstash"
+  }
+}
+
+PUT _scripts/busqueda_blogs
+{
+  "script": {
+    "lang": "mustache",
+    "source": {
+      "query": {
+        "match": {
+          "content": "{{terminos}}"
+        }
+      }
+    }
+  }
+}
+
+PUT _scripts/busqueda_blogs
+{
+  "script": {
+    "lang": "mustache",
+    "source": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "match": {
+                "content": "{{terminos}}"
+              }
+            }
+          ],
+          "should": [
+            {
+              "match_phrase": {
+                "title": {
+                  "query": "{{terminos}}",
+                  "boost": 3
+                }
+              }
+            },
+            {
+              "match_phrase": {
+                "content": {
+                  "query": "{{terminos}}",
+                  "boost": 2
+                }
+              }
+            },
+            {
+              "match": {
+                "title": "{{terminos}}"
+              }
+            }
+          ]
+        }
+      },
+      "highlight": {
+        "fields": {
+          "title": {
+            "pre_tags" : ["<mark>"], "post_tags" : ["</mark>"],
+            "require_field_match": false
+          },
+          "content": {
+            "pre_tags" : ["<mark>"], "post_tags" : ["</mark>"],
+            "require_field_match": false
+          }
+        }
+      }
+    }
+  }
+}
+
