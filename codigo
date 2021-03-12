@@ -1,3 +1,28 @@
+# CRUD con Elasticsearch
+
+PUT productos/_doc/1
+{
+  "sku": 101,
+  "nombre": "telefono celular",
+  "descripción": "Buen telefono para cualquier situación.",
+  "precio": 1000.99
+}
+
+GET productos/_doc/1
+
+POST productos/_update/1
+{
+  "doc": {
+    "precio": 9999.99
+  }
+}
+
+DELETE productos/_doc/1
+
+####
+
+# Cuatro productos mas
+
 PUT productos/_doc/2
 {
   "sku": 102,
@@ -28,7 +53,26 @@ PUT productos/_doc/5
   "descripción": "A diario es posible el uso de esta pintura. Su uso es muy conveniente aun cuando su uso sea diario."
 }
 
-ET productos/_search
+###
+
+# busquedas
+
+GET productos/_search
+
+GET productos/_search
+{
+  "query": {
+    "match": {
+      "descripción": "tenis de uso diario"
+    }
+  }
+}
+
+###
+
+# especificando el operador logico en una busqueda
+
+GET productos/_search
 {
   "query": {
     "match": {
@@ -65,6 +109,10 @@ GET productos/_search
   }
 }
 
+###
+
+# mejorando la consulta usando el operador should
+
 GET productos/_search
 {
   "query": {
@@ -87,6 +135,138 @@ GET productos/_search
   }
 }
 
+###
+
+# mejorando la consulta usando frases
+
+GET productos/_search
+{
+  
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "descripción": "tenis de uso diario"
+          }
+        }
+      ],
+      "should": [
+        {
+          "match": {
+            "nombre": "tenis de uso diario"
+          }
+        },
+        {
+          "match_phrase": {
+            "descripción": "tenis de uso diario"
+          }
+        }
+      ]
+    }
+  }
+}
+
+###
+
+# anadiendo boosts
+
+GET productos/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "descripción": "tenis de uso diario"
+          }
+        }
+      ],
+      "should": [
+        {
+          "match_phrase": {
+            "nombre": {
+              "query": "tenis de uso diario",
+              "boost": 4
+            }
+          }
+        },
+        {
+          "match": {
+            "nombre": {
+              "query": "tenis de uso diario",
+              "boost": 3
+            }
+          }
+        },
+        {
+          "match_phrase": {
+            "descripción": {
+              "query": "tenis de uso diario",
+              "boost": 2
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
+###
+
+# eliminando productos que dicen pintura en el nombre
+
+GET productos/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "descripción": "tenis de uso diario"
+          }
+        }
+      ],
+      "should": [
+        {
+          "match_phrase": {
+            "nombre": {
+              "query": "tenis de uso diario",
+              "boost": 4
+            }
+          }
+        },
+        {
+          "match": {
+            "nombre": {
+              "query": "tenis de uso diario",
+              "boost": 3
+            }
+          }
+        },
+        {
+          "match_phrase": {
+            "descripción": {
+              "query": "tenis de uso diario",
+              "boost": 2
+            }
+          }
+        }
+      ],
+      "must_not": [
+        {
+          "match": {
+            "nombre": "pintura"
+          }
+        }
+      ]
+    }
+  }
+}
+
+###
+
+# usando pantillas de busqueda
 
 PUT _scripts/busqueda_blogs
 {
@@ -111,6 +291,10 @@ GET blogs/_search/template
   }
 }
 
+###
+
+# anade highlighting
+
 PUT _scripts/busqueda_blogs
 {
   "script": {
@@ -120,10 +304,26 @@ PUT _scripts/busqueda_blogs
         "match": {
           "content": "{{terminos}}"
         }
+      },
+      "highlight": {
+        "fields": {
+          "title": {
+            "pre_tags" : ["<mark>"], "post_tags" : ["</mark>"],
+            "require_field_match": false
+          },
+          "content": {
+            "pre_tags" : ["<mark>"], "post_tags" : ["</mark>"],
+            "require_field_match": false
+          }
+        }
       }
     }
   }
 }
+
+###
+
+# mejora los resultados usando should
 
 PUT _scripts/busqueda_blogs
 {
@@ -141,24 +341,10 @@ PUT _scripts/busqueda_blogs
           ],
           "should": [
             {
-              "match_phrase": {
-                "title": {
-                  "query": "{{terminos}}",
-                  "boost": 3
-                }
-              }
-            },
-            {
-              "match_phrase": {
-                "content": {
-                  "query": "{{terminos}}",
-                  "boost": 2
-                }
-              }
-            },
-            {
               "match": {
-                "title": "{{terminos}}"
+                "title": {
+                  "query": "{{terminos}}"
+                }
               }
             }
           ]
@@ -179,4 +365,69 @@ PUT _scripts/busqueda_blogs
     }
   }
 }
+
+###
+
+# mejora los resultados usando frases y boost
+
+PUT _scripts/busqueda_blogs
+{
+  "script": {
+    "lang": "mustache",
+    "source": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "match": {
+                "content": "{{terminos}}"
+              }
+            }
+          ],
+          "should": [
+            {
+              "match_phrase": {
+                "title": {
+                  "query": "{{terminos}}",
+                  "boost": 4
+                }
+              }
+            },
+            {
+              "match_phrase": {
+                "content": {
+                  "query": "{{terminos}}",
+                  "boost": 3
+                }
+              }
+            },
+            {
+              "match": {
+                "title": {
+                  "query": "{{terminos}}",
+                  "boost": 2
+                }
+              }
+            }
+          ]
+        }
+      },
+      "highlight": {
+        "fields": {
+          "title": {
+            "pre_tags" : ["<mark>"], "post_tags" : ["</mark>"],
+            "require_field_match": false
+          },
+          "content": {
+            "pre_tags" : ["<mark>"], "post_tags" : ["</mark>"],
+            "require_field_match": false
+          }
+        }
+      }
+    }
+  }
+}
+
+###
+
 
